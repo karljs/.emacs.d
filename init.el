@@ -75,6 +75,10 @@
     (exec-path-from-shell-initialize)))
 
 
+(use-package eshell
+  :bind (("C-c t" . eshell)))
+
+
 (use-package eglot
   :ensure
   :config
@@ -92,9 +96,9 @@
     "Install Tree-sitter grammars if they are absent."
     (interactive)
     (dolist (grammar
-             ;; Note the version numbers. These are the versions that
-             ;; are known to work with Combobulate *and* Emacs.
-             `((css . (,(kjs-ts-url "css") "v0.20.0"))
+             `((c . (,(kjs-ts-url "c") "v0.23.5"))
+               (cpp . (,(kjs-ts-url "cpp") "v0.23.4"))
+               (css . (,(kjs-ts-url "css") "v0.20.0"))
                (go . (,(kjs-ts-url "go") "v0.20.0"))
                (html . (,(kjs-ts-url "html") "v0.20.1"))
                (javascript . (,(kjs-ts-url "javascript") "v0.20.1" "src"))
@@ -229,28 +233,6 @@
   (setq tab-always-indent 'complete))
 
 
-(use-package cape
-  :ensure
-  ;; Bind prefix keymap providing all Cape commands under a mnemonic key.
-  ;; Press C-c p ? to for help.
-  :bind ("C-c p" . cape-prefix-map) ;; Alternative key: M-<tab>, M-p, M-+
-  ;; Alternatively bind Cape commands individually.
-  ;; :bind (("C-c p d" . cape-dabbrev)
-  ;;        ("C-c p h" . cape-history)
-  ;;        ("C-c p f" . cape-file)
-  ;;        ...)
-  :init
-  ;; Add to the global default value of `completion-at-point-functions' which is
-  ;; used by `completion-at-point'.  The order of the functions matters, the
-  ;; first function returning a result wins.  Note that the list of buffer-local
-  ;; completion functions takes precedence over the global list.
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-elisp-block)
-  ;; (add-hook 'completion-at-point-functions #'cape-history)
-  ;; ...
-)
-
 
 (use-package smartparens
   :ensure
@@ -320,6 +302,13 @@
 	 ("C-c M-g" . magit-file-dispatch)))
 
 
+(use-package projectile
+  :ensure
+  :config
+  (projectile-mode +1)
+  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
+
+
 (use-package rust-mode
   :ensure
   :init
@@ -338,3 +327,13 @@
   :after geiser
   :config
   (setq geiser-racket-binary "/usr/local/bin/racket"))
+
+
+(use-package cc-mode
+  :after eglot
+  :config
+  (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
+  (add-hook 'c-mode-hook 'eglot-ensure)
+  (add-hook 'c-ts-mode-hook 'eglot-ensure)
+  (add-hook 'c++-mode-hook 'eglot-ensure)
+  (add-hook 'c++-ts-mode-hook 'eglot-ensure))
