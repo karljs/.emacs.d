@@ -1,21 +1,72 @@
 (require 'package)
+(setq package-enable-at-startup nil)
 (add-to-list
  'package-archives
  '("melpa" . "https://melpa.org/packages/")
  t)
+(package-initialize)
 
-(setq custom-file null-device)
 
-(set-face-attribute 'default nil
-		    :font "PragmataPro"
-		    :height 170)
-(load-theme 'modus-operandi t)
+;; Bootstrap `use-package'
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+(eval-when-compile
+  (require 'use-package))
 
-(setq mac-command-modifier 'meta
-      mac-option-modifier 'none)
-(tool-bar-mode -1)
-(set-scroll-bar-mode nil)
-(setq help-window-select t)
+
+(use-package emacs
+  :demand t
+  :init
+  (setq gc-cons-percentage 0.5
+        gc-cons-threshold (* 128 1024 1024))
+
+  (setq custom-file (concat user-emacs-directory "custom.el"))
+  (when (file-exists-p custom-file)
+    (load custom-file))
+
+  (set-face-attribute 'default nil
+		      :font "PragmataPro"
+		      :height 170)
+  (setq mac-command-modifier 'meta
+        mac-option-modifier 'none)
+  (tool-bar-mode -1)
+  (set-scroll-bar-mode nil)
+  (setq help-window-select t)
+  (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  (setq-default indent-tabs-mode nil)
+
+  (eval-and-compile
+    (mapc #'(lambda (entry)
+              (define-prefix-command (cdr entry))
+              (bind-key (car entry) (cdr entry)))
+          '(
+            ;; ("C-,"   . my-ctrl-comma-map)
+            ;; ("<C-m>" . my-ctrl-m-map)
+            ("C-h e" . my-emacs-lisp-help-map)
+            ;; ("C-c b" . my-bookmarks-bibliography-map)
+            ;; ("C-c e" . my-emacs-lisp-map)
+            ;; ("C-c m" . my-ctrl-c-m-map)
+            ;; ("C-c n" . my-ctrl-c-n-map)
+            ;; ("C-c t" . my-multi-term-map)
+            ;; ("C-c w" . my-web-map)
+            ;; ("C-c y" . my-yasnippet-map)
+            ;; ("C-c H" . my-highlight-map)
+            ;; ("C-c N" . my-ctrl-c-N-map)
+            )))
+
+  )
+
+
+(use-package no-littering
+  :ensure
+  :config
+  (setq auto-save-file-name-transforms
+        `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+  (setq backup-directory-alist
+	`(("." . ,(no-littering-expand-var-file-name "backups/")))))
+
 
 (use-package exec-path-from-shell
   :ensure
@@ -25,7 +76,41 @@
 
 
 (use-package eglot
-  :ensure)
+  :ensure
+  :config
+  :bind (("C-c C-a" . eglot-code-actions)))
+
+
+(use-package treesit
+  :mode (("\\.tsx\\'" . tsx-ts-mode))
+  :preface
+  (defun kjs-ts-url (proj)
+    (concat
+     "https://github.com/tree-sitter/tree-sitter-"
+     proj))
+  (defun kjs-setup-install-grammars ()
+    "Install Tree-sitter grammars if they are absent."
+    (interactive)
+    (dolist (grammar
+             ;; Note the version numbers. These are the versions that
+             ;; are known to work with Combobulate *and* Emacs.
+             `((css . (,(kjs-ts-url "css") "v0.20.0"))
+               (go . (,(kjs-ts-url "go") "v0.20.0"))
+               (html . (,(kjs-ts-url "html") "v0.20.1"))
+               (javascript . (,(kjs-ts-url "javascript") "v0.20.1" "src"))
+               (json . (,(kjs-ts-url "json") "v0.20.2"))
+               (markdown . (,(kjs-ts-url "markdown") "v0.7.1"))
+               (python . (,(kjs-ts-url "python") "v0.20.4"))
+               (rust . (,(kjs-ts-url "rust") "v0.21.2"))
+               (toml . (,(kjs-ts-url "toml") "v0.5.1"))
+               (tsx . (,(kjs-ts-url "typescript") "v0.20.3" "tsx/src"))
+               (typescript . (,(kjs-ts-url "typescript") "v0.20.3" "typescript/src"))
+               (yaml . (,(kjs-ts-url "yaml") "v0.5.0"))))
+      (add-to-list 'treesit-language-source-alist grammar)
+      (unless (treesit-language-available-p (car grammar))
+        (treesit-install-language-grammar (car grammar)))))
+  :config
+  (kjs-setup-install-grammars))
 
 
 (use-package vertico
@@ -40,7 +125,6 @@
   (setq orderless-matching-styles '(orderless-literal orderless-initialism orderless-flex)
 	completion-styles '(orderless basic)
         completion-category-overrides '((file (styles basic partial-completion)))))
-
 
 (use-package consult
   :ensure
@@ -126,22 +210,47 @@
   ;; Optionally make narrowing help available in the minibuffer.
   ;; You may want to use `embark-prefix-help-command' or which-key instead.
   ;; (keymap-set consult-narrow-map (concat consult-narrow-key " ?") #'consult-narrow-help)
-)
+  )
 
 
-(use-package geiser
-  :ensure)
-
-(use-package geiser-racket
+(use-package helpful
   :ensure
-  :after geiser
-  :config
-  (setq geiser-racket-binary "/usr/local/bin/racket"))
+  :bind (("C-h f" . helpful-callable)
+         ("C-h v" . helpful-variable)
+         ("C-h k" . helpful-key)
+         ("C-h x" . helpful-command)))
+
 
 (use-package corfu
   :ensure
   :init
-  (global-corfu-mode))
+  (global-corfu-mode)
+  :config
+  (setq tab-always-indent 'complete))
+
+
+(use-package cape
+  :ensure
+  ;; Bind prefix keymap providing all Cape commands under a mnemonic key.
+  ;; Press C-c p ? to for help.
+  :bind ("C-c p" . cape-prefix-map) ;; Alternative key: M-<tab>, M-p, M-+
+  ;; Alternatively bind Cape commands individually.
+  ;; :bind (("C-c p d" . cape-dabbrev)
+  ;;        ("C-c p h" . cape-history)
+  ;;        ("C-c p f" . cape-file)
+  ;;        ...)
+  :init
+  ;; Add to the global default value of `completion-at-point-functions' which is
+  ;; used by `completion-at-point'.  The order of the functions matters, the
+  ;; first function returning a result wins.  Note that the list of buffer-local
+  ;; completion functions takes precedence over the global list.
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  ;; (add-hook 'completion-at-point-functions #'cape-history)
+  ;; ...
+)
+
 
 (use-package smartparens
   :ensure
@@ -149,16 +258,58 @@
   (prog-mode text-mode markdown-mode)
   :config
   (require 'smartparens-config)
-  :bind (
-	 ("C-c <left>" . sp-forward-barf-sexp)
-	 ("C-c <right>" . sp-forward-slurp-sexp)
+  :bind (("C-c <left>" . sp-forward-barf-sexp)
+         ("C-c <right>" . sp-forward-slurp-sexp)
          ("C-c S-<left>" . sp-backward-slurp-sexp)
-	 ("C-c S-<right>" . sp-backward-barf-sexp)
-	 ("C-M-t" . sp-transpose-sexp)
-	 ("C-S-k" . sp-kill-hybrid-sexp)
-	 ("C-c C-<right>" . sp-slurp-hybrid-sexp)
-	 ("C-(" . sp-rewrap-sexp)
-	 ("C-M-<backspace>" . sp-splice-sexp-killing-around)))
+         ("C-c S-<right>" . sp-backward-barf-sexp)
+         ("C-M-t" . sp-transpose-sexp)
+         ("C-S-k" . sp-kill-hybrid-sexp)
+         ("C-c C-<right>" . sp-slurp-hybrid-sexp)
+         ("C-(" . sp-rewrap-sexp)
+         ("C-M-<backspace>" . sp-splice-sexp-killing-around)))
+
+
+(use-package doom-modeline
+  :ensure
+  :hook (after-init . doom-modeline-mode)
+  :config
+  (setq doom-modeline-icon nil))
+
+
+(use-package ef-themes
+  :ensure
+;;   :config
+;;   (setq ef-themes-mixed-fonts t
+;;         ;; ef-themes-variable-pitch-ui t
+;;         )
+;;   (load-theme 'ef-spring :no-confirm)
+  )
+
+(use-package doom-themes
+  :ensure t
+  :config
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t)
+  (load-theme 'doom-gruvbox t)
+
+  (doom-themes-visual-bell-config)
+  (doom-themes-org-config))
+
+
+(use-package avy
+  :ensure
+  :config
+  (global-set-key (kbd "C-:") 'avy-goto-char))
+
+
+(use-package ace-window
+  :ensure
+  :bind ("M-o". ace-window))
+
+
+(use-package change-inner
+  :ensure
+  :bind (("M-i" . change-inner)))
 
 
 (use-package magit
@@ -167,3 +318,23 @@
 	 ("C-x g" . magit-status)
 	 ("C-x M-g" . magit-dispatch)
 	 ("C-c M-g" . magit-file-dispatch)))
+
+
+(use-package rust-mode
+  :ensure
+  :init
+  (setq rust-mode-treesitter-derive t)
+  (add-hook 'rust-mode-hook 'eglot-ensure)
+  :config
+  (setq rust-format-on-save t))
+
+
+(use-package geiser
+  :ensure)
+
+
+(use-package geiser-racket
+  :ensure
+  :after geiser
+  :config
+  (setq geiser-racket-binary "/usr/local/bin/racket"))
