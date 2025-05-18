@@ -36,6 +36,22 @@
   (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
   (add-hook 'before-save-hook 'delete-trailing-whitespace)
   (setq-default indent-tabs-mode nil)
+  (when (string= system-type "darwin")
+    (setq dired-use-ls-dired nil))
+
+  ;; (load-theme 'modus-operandi t)
+
+  (setq major-mode-remap-alist
+        '(
+          ;; (yaml-mode . yaml-ts-mode)
+          ;; (bash-mode . bash-ts-mode)
+          ;; (js2-mode . js-ts-mode)
+          ;; (typescript-mode . typescript-ts-mode)
+          ;; (json-mode . json-ts-mode)
+          ;; (css-mode . css-ts-mode)
+          (c-mode . c-ts-mode)
+          (c++-mode . c++-ts-mode)
+          (python-mode . python-ts-mode)))
 
   (eval-and-compile
     (mapc #'(lambda (entry)
@@ -54,9 +70,7 @@
             ;; ("C-c y" . my-yasnippet-map)
             ;; ("C-c H" . my-highlight-map)
             ;; ("C-c N" . my-ctrl-c-N-map)
-            )))
-
-  )
+            ))))
 
 
 (use-package no-littering
@@ -74,16 +88,35 @@
   (when (memq window-system '(mac ns x))
     (exec-path-from-shell-initialize)))
 
+;; (use-package lsp-mode
+;;   :ensure)
 
-(use-package eshell
-  :bind (("C-c t" . eshell)))
+;; (use-package lsp-ui
+;;   :ensure
+;;   :after lsp-mode)
 
+;; (use-package lsp-treemacs
+;;   :ensure
+;;   :after lsp-mode)
+
+;; (use-package dap-mode
+;;   :ensure
+;;   :after lsp-mode)
 
 (use-package eglot
   :ensure
-  :config
+  :after cc-mode
+  :hook
+  (c-mode . eglot-ensure)
+  (c-ts-mode . eglot-ensure)
+  (c++-mode . eglot-ensure)
+  (c++-ts-mode . eglot-ensure)
   :bind (("C-c C-a" . eglot-code-actions)))
 
+(use-package consult-eglot
+  :ensure
+  :after eglot consult
+  :bind (("C-c C-s" . consult-eglot-symbols)))
 
 (use-package treesit
   :mode (("\\.tsx\\'" . tsx-ts-mode))
@@ -233,7 +266,6 @@
   (setq tab-always-indent 'complete))
 
 
-
 (use-package smartparens
   :ensure
   :hook
@@ -255,17 +287,9 @@
   :ensure
   :hook (after-init . doom-modeline-mode)
   :config
-  (setq doom-modeline-icon nil))
-
-
-(use-package ef-themes
-  :ensure
-;;   :config
-;;   (setq ef-themes-mixed-fonts t
-;;         ;; ef-themes-variable-pitch-ui t
-;;         )
-;;   (load-theme 'ef-spring :no-confirm)
-  )
+  ;; (setq doom-modeline-icon nil)
+  (setq nerd-icons-font-family "PragmataPro")
+)
 
 (use-package doom-themes
   :ensure t
@@ -313,9 +337,11 @@
   :ensure
   :init
   (setq rust-mode-treesitter-derive t)
-  (add-hook 'rust-mode-hook 'eglot-ensure)
   :config
-  (setq rust-format-on-save t))
+  (setq rust-format-on-save t)
+  (add-hook 'rust-mode-hook 'eglot-ensure)
+  ;; (add-hook 'rust-mode-hook #'lsp)
+)
 
 
 (use-package geiser
@@ -330,10 +356,53 @@
 
 
 (use-package cc-mode
-  :after eglot
   :config
-  (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
-  (add-hook 'c-mode-hook 'eglot-ensure)
-  (add-hook 'c-ts-mode-hook 'eglot-ensure)
-  (add-hook 'c++-mode-hook 'eglot-ensure)
-  (add-hook 'c++-ts-mode-hook 'eglot-ensure))
+  ;; (electric-indent-mode -1)
+
+  ;; Borrowed from the LLVM project, except make it 4 space indent
+  (defun llvm-lineup-statement (langelem)
+    (let ((in-assign (c-lineup-assignments langelem)))
+      (if (not in-assign)
+          '++
+        (aset in-assign 0
+              (+ (aref in-assign 0)
+                 (* 4 c-basic-offset)))
+        in-assign)))
+  ;; :hook
+  ;; ((c-mode c++-mode) . (lambda ()
+  ;;       		 (c-toggle-electric-state -1)))
+)
+
+
+(use-package realgud
+  :ensure
+  :defer)
+
+(use-package realgud-lldb
+  :ensure
+  :defer
+  :after realgud)
+
+(use-package tex
+  :defer t
+  :ensure auctex
+  :config
+  (setq TeX-auto-save t))
+
+(use-package jinx
+  :ensure
+  :hook (emacs-startup . global-jinx-mode)
+  :bind (("M-$" . jinx-correct)
+         ("C-M-$" . jinx-languages)))
+
+(use-package vterm
+  :ensure
+  :bind (("C-c t" . vterm)))
+
+(use-package slime
+  :ensure
+  :config
+  (setq inferior-lisp-program "sbcl"))
+
+(use-package vundo
+  :ensure)
