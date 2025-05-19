@@ -33,7 +33,7 @@
         gc-cons-threshold (* 128 1024 1024))
 
   ;; Customize is frustrating
-  (custom-file (concat user-emacs-directory "custom.el"))
+  (setq custom-file (concat user-emacs-directory "custom.el"))
   (when (file-exists-p custom-file)
     (load custom-file))
 
@@ -43,6 +43,7 @@
 		      :height 170)
   (tool-bar-mode -1)
   (set-scroll-bar-mode nil)
+  (global-hl-line-mode t)
 
   (when (eq system-type 'darwin)
     (setq mac-command-modifier 'meta
@@ -61,7 +62,9 @@
           (python-mode . python-ts-mode)))
 
   ;; Global keybinds
-  :bind ([remap list-buffers] . ibuffer))
+  :bind (([remap list-buffers] . ibuffer)
+         ("C-M-y" . duplicate-dwim)
+         ([remap zap-to-char] . zap-up-to-char)))
 
 
 (use-package no-littering
@@ -319,6 +322,12 @@
 (use-package vundo
   :ensure)
 
+(use-package whole-line-or-region
+  :ensure
+  :config
+  (whole-line-or-region-global-mode nil))
+
+
 
 ;;------------------------------------------------------------------------------
 ;; More aesthetics, mostly borrowing from Doom
@@ -327,8 +336,7 @@
   :ensure
   :hook (after-init . doom-modeline-mode)
   :config
-  (setq nerd-icons-font-family "PragmataPro")
-)
+  (setq nerd-icons-font-family "PragmataPro"))
 
 (use-package doom-themes
   :ensure t
@@ -340,6 +348,10 @@
   (doom-themes-visual-bell-config)
   (doom-themes-org-config))
 
+(use-package rainbow-delimiters
+  :ensure
+  :hook
+  (prog-mode . rainbow-delimiters-mode))
 
 ;;------------------------------------------------------------------------------
 ;; General programming
@@ -350,7 +362,6 @@
 	 ("C-x g" . magit-status)
 	 ("C-x M-g" . magit-dispatch)
 	 ("C-c M-g" . magit-file-dispatch)))
-
 
 (use-package projectile
   :ensure
@@ -366,6 +377,21 @@
 ;;   :ensure
 ;;   :defer
 ;;   :after realgud)
+
+
+(use-package paredit
+  :ensure
+  :hook
+  (emacs-lisp-mode . enable-paredit-mode)
+  (eval-expression-minibuffer-setup . enable-paredit-mode)
+  (lisp-mode . enable-paredit-mode)
+  (lisp-interaction-mode . enable-paredit-mode))
+
+(use-package paredit-everywhere
+  :ensure
+  :after paredit
+  :hook
+  (prog-mode . paredit-everywhere-mode))
 
 
 ;;------------------------------------------------------------------------------
