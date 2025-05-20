@@ -60,6 +60,7 @@
         '((c-mode . c-ts-mode)
           (c++-mode . c++-ts-mode)
           (python-mode . python-ts-mode)))
+  (add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-ts-mode))
 
   ;; Global keybinds
   :bind (([remap list-buffers] . ibuffer)
@@ -93,6 +94,10 @@
   (c++-mode . eglot-ensure)
   (c++-ts-mode . eglot-ensure)
   (rust-mode . eglot-ensure)
+  (python-mode . eglot-ensure)
+  :config
+  (add-to-list 'eglot-server-programs
+               '(python-mode . ("ruff" "server")))
   :bind (("C-c C-a" . eglot-code-actions)))
 
 (use-package consult-eglot
@@ -313,7 +318,7 @@
 (use-package jinx
   :ensure
   :hook (emacs-startup . global-jinx-mode)
-  :bind (("C-:" . jinx-correct)))
+  :bind (("C-\"" . jinx-correct)))
 
 (use-package vterm
   :ensure
@@ -414,8 +419,8 @@
 ;;   (setq geiser-racket-binary "/usr/local/bin/racket"))
 
 (use-package tex
-  :defer t
   :ensure auctex
+  :defer t
   :config
   (setq TeX-auto-save t))
 
@@ -423,3 +428,32 @@
 ;;   :ensure
 ;;   :config
 ;;   (setq inferior-lisp-program "sbcl"))
+
+(use-package yaml-mode
+  :ensure
+  :mode "\\.yml\\'")
+
+(use-package python-mode
+  :ensure
+  :hook
+  (after-save . eglot-format))
+
+
+(use-package cc-mode
+  :preface
+  (defun kjs/insert-ifdef-guards ()
+    "Insert #ifdef guards for C/C++ header files based on the buffer name"
+    (interactive)
+    (let* ((project (projectile-project-name))
+           (name (file-name-base (buffer-file-name)))
+           (symbol (concat project "_" name "_h")))
+      (progn
+        (insert (concat "#ifndef " symbol))
+        (end-of-line)
+        (newline)
+        (insert (concat  "#define " symbol))
+        (end-of-line)
+        (newline)
+        (newline)
+        (insert "#endif")
+        (previous-line)))))
