@@ -6,6 +6,8 @@
 ;; /_/  /_/ /_//_/  \__/(_)___//_/
 ;;
 
+
+
 ;;------------------------------------------------------------------------------
 ;; Setup package manager and bootstrap use-package
 (require 'package)
@@ -96,13 +98,11 @@
   (rust-mode . eglot-ensure)
   (python-mode . eglot-ensure)
   :config
-  (add-to-list 'eglot-server-programs
-               '(python-mode . ("ruff" "server")))
+  (add-to-list 'eglot-server-programs '((c++-ts-mode c-ts-mode) "clangd"))
   :bind (("C-c C-a" . eglot-code-actions)))
 
 (use-package consult-eglot
   :ensure
-  :after eglot consult
   :bind (("C-c C-s" . consult-eglot-symbols)))
 
 (use-package treesit
@@ -122,13 +122,13 @@
                (html . (,(kjs-ts-url "html") "v0.20.1"))
                (javascript . (,(kjs-ts-url "javascript") "v0.20.1" "src"))
                (json . (,(kjs-ts-url "json") "v0.20.2"))
-               (markdown . (,(kjs-ts-url "markdown") "v0.7.1"))
+               (markdown . ("https://github.com/ikatyang/tree-sitter-markdown" "v0.7.1"))
                (python . (,(kjs-ts-url "python") "v0.20.4"))
                (rust . (,(kjs-ts-url "rust") "v0.21.2"))
                (toml . (,(kjs-ts-url "toml") "v0.5.1"))
                (tsx . (,(kjs-ts-url "typescript") "v0.20.3" "tsx/src"))
                (typescript . (,(kjs-ts-url "typescript") "v0.20.3" "typescript/src"))
-               (yaml . (,(kjs-ts-url "yaml") "v0.5.0"))))
+               (yaml . ("https://github.com/ikatyang/tree-sitter-yaml" "v0.5.0"))))
       (add-to-list 'treesit-language-source-alist grammar)
       (unless (treesit-language-available-p (car grammar))
         (treesit-install-language-grammar (car grammar)))))
@@ -286,7 +286,7 @@
 
 (use-package cape
   :ensure
-  :bind ("M-c" . cape-prefix-map)
+  :bind ("C-<tab>" . cape-prefix-map)
   :init
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file))
@@ -331,6 +331,16 @@
   :ensure
   :config
   (whole-line-or-region-global-mode nil))
+
+
+;;------------------------------------------------------------------------------
+;; Other file types
+
+(use-package pdf-tools
+  :ensure
+  :config
+  (pdf-tools-install)
+  (setq-default pdf-view-display-size 'fit-page))
 
 
 
@@ -390,7 +400,8 @@
   (emacs-lisp-mode . enable-paredit-mode)
   (eval-expression-minibuffer-setup . enable-paredit-mode)
   (lisp-mode . enable-paredit-mode)
-  (lisp-interaction-mode . enable-paredit-mode))
+  (lisp-interaction-mode . enable-paredit-mode)
+  (minibuffer-setup . disable-paredit-mode))
 
 (use-package paredit-everywhere
   :ensure
@@ -403,11 +414,23 @@
 ;; Language-specific
 
 (use-package rust-mode
+  :after eglot
+  :preface
   :ensure
   :init
   (setq rust-mode-treesitter-derive t)
   :config
-  (setq rust-format-on-save t))
+  (setq rust-format-on-save t)
+  ;; This tells rust-analyzer to use clippy, and to search all kinds
+  ;; of symbols since for some reason the default is only types.
+  (add-to-list 'eglot-server-programs
+               '((rust-ts-mode rust-mode) .
+                 ("rust-analyzer"
+                  :initializationOptions
+                  (:check
+                   (:command "clippy")
+                   :workspace
+                   (:symbol (:search (:kind "all_symbols"))))))))
 
 ;; (use-package geiser
 ;;   :ensure)
@@ -422,7 +445,10 @@
   :ensure auctex
   :defer t
   :config
-  (setq TeX-auto-save t))
+  (setq TeX-auto-save t
+        org-latex-compiler 'lualatex)
+
+  (add-hook 'TeX-after-compilation-finished-functions #'TeX-revert-document-buffer))
 
 ;; (use-package slime
 ;;   :ensure
@@ -434,10 +460,7 @@
   :mode "\\.yml\\'")
 
 (use-package python-mode
-  :ensure
-  :hook
-  (after-save . eglot-format))
-
+  :ensure)
 
 (use-package cc-mode
   :preface
@@ -456,4 +479,12 @@
         (newline)
         (newline)
         (insert "#endif")
-        (previous-line)))))
+        (previous-line))))
+
+  :config
+  (setq c-ts-mode-indent-offset 4)
+  (setq c-ts-mode-indent-style 'linux)
+  )
+
+(use-package poke-mode
+  :ensure)
