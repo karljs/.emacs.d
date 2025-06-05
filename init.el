@@ -40,11 +40,17 @@
     (load custom-file))
 
   ;; Aesthetics
-  (set-face-attribute 'default nil
-		      :font "PragmataPro"
-		      :height 170)
+  (let ((font-size
+         (if (eq system-type 'darwin)
+             170
+           140)))
+    (set-face-attribute 'default nil
+		        :font "PragmataPro"
+		        :height font-size))
   (tool-bar-mode -1)
   (set-scroll-bar-mode nil)
+  (when (not (eq system-type 'darwin))
+    (menu-bar-mode -1))
   (global-hl-line-mode t)
 
   (when (eq system-type 'darwin)
