@@ -418,6 +418,10 @@
 (use-package paredit-everywhere
   :ensure
   :after paredit
+  :config
+  (eval-after-load "paredit-everywhere"
+    '(progn
+       (define-key paredit-everywhere-mode-map (kbd "M-s") nil)))
   :hook
   (prog-mode . paredit-everywhere-mode))
 
