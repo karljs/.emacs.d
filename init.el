@@ -51,7 +51,8 @@
   (set-scroll-bar-mode nil)
   (when (not (eq system-type 'darwin))
     (menu-bar-mode -1))
-  (global-hl-line-mode t)
+  (add-hook 'prog-mode-hook #'hl-line-mode)
+  (add-hook 'text-mode-hook #'hl-line-mode)
 
   (when (eq system-type 'darwin)
     (setq mac-command-modifier 'meta
