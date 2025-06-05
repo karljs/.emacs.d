@@ -403,6 +403,11 @@
 
 (use-package paredit
   :ensure
+  :config
+  ;; this interferes with my preferred consult keys
+  (eval-after-load "paredit"
+    '(progn
+       (define-key paredit-mode-map (kbd "M-s") nil)))
   :hook
   (emacs-lisp-mode . enable-paredit-mode)
   (eval-expression-minibuffer-setup . enable-paredit-mode)
