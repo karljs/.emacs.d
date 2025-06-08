@@ -95,6 +95,7 @@
 
 ;;------------------------------------------------------------------------------
 ;; LSP, treesitter
+
 (use-package eglot
   :ensure
   :hook
@@ -104,8 +105,11 @@
   (c++-ts-mode . eglot-ensure)
   (rust-mode . eglot-ensure)
   (python-mode . eglot-ensure)
+  (haskell-mode . eglot-ensure)
   :config
+  (setq eglot-autoshutdown t)
   (add-to-list 'eglot-server-programs '((c++-ts-mode c-ts-mode) "clangd"))
+  ;; (add-hook 'eglot-managed-mode-hook #'eldoc-box-hover-mode t)
   :bind (("C-c C-a" . eglot-code-actions)))
 
 (use-package consult-eglot
@@ -302,6 +306,10 @@
 ;;------------------------------------------------------------------------------
 ;; General minor improvements, navigation
 
+(use-package eldoc-box
+  :ensure)
+
+
 (use-package helpful
   :ensure
   :bind (("C-h f" . helpful-callable)
@@ -428,6 +436,11 @@
 
 ;;------------------------------------------------------------------------------
 ;; Language-specific
+
+(use-package haskell-mode
+  :ensure
+  )
+
 
 (use-package rust-mode
   :after eglot
