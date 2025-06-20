@@ -60,6 +60,8 @@
           dired-use-ls-dired nil))
 
   ;; Basic behavior changes
+  (setq save-interprogram-paste-before-kill t)
+  (setq yank-pop-change-selection t)
   (setq help-window-select t)
   (setq enable-recursive-minibuffers t)
   (minibuffer-depth-indicate-mode 1)
